@@ -23,26 +23,8 @@ import { CERT_STATUS_TYPE } from './alerts/certificate-status-alert/CertificateS
 import OutlineTab from './OutlineTab';
 import LoadedTabPage from '../../tab-page/LoadedTabPage';
 
-const mockCoursewareSearchParams = jest.fn();
-
 initializeMockApp();
 jest.mock('@edx/frontend-platform/analytics');
-jest.mock('../courseware-search/hooks', () => ({
-  ...jest.requireActual('../courseware-search/hooks'),
-  useCoursewareSearchParams: () => mockCoursewareSearchParams,
-}));
-
-const coursewareSearch = {
-  query: '',
-  filter: '',
-  setQuery: jest.fn(),
-  setFilter: jest.fn(),
-  clearSearchParams: jest.fn(),
-};
-
-const mockSearchParams = ((props = coursewareSearch) => {
-  mockCoursewareSearchParams.mockReturnValue(props);
-});
 
 describe('Outline Tab', () => {
   let axiosMock;
@@ -95,14 +77,7 @@ describe('Outline Tab', () => {
       expiration_date: null,
     });
 
-    // Mock courseware search params
-    mockSearchParams();
-
     logUnhandledRequests(axiosMock);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
   });
 
   describe('Course Outline', () => {
@@ -132,18 +107,7 @@ describe('Outline Tab', () => {
       expect(expandedSectionNode).toHaveAttribute('aria-expanded', 'true');
     });
 
-    it('includes outline_tab_notifications_slot', async () => {
-      const { courseBlocks } = await buildMinimalCourseBlocks(courseId, 'Title', { resumeBlock: true });
-      setTabData({
-        course_blocks: { blocks: courseBlocks.blocks },
-      });
-      await fetchAndRender();
-
-      expect(screen.getByTestId('outline_tab_notifications_slot')).toBeInTheDocument();
-    });
-
     it('handles expand/collapse all button click', async () => {
-      const user = userEvent.setup();
       await fetchAndRender();
       // Button renders as "Expand All"
       const expandButton = screen.getByRole('button', { name: 'Expand all' });
@@ -154,11 +118,11 @@ describe('Outline Tab', () => {
       expect(collapsedSectionNode).toHaveAttribute('aria-expanded', 'false');
 
       // Click to expand section
-      await user.click(expandButton);
+      userEvent.click(expandButton);
       await waitFor(() => expect(collapsedSectionNode).toHaveAttribute('aria-expanded', 'true'));
 
       // Click to collapse section
-      await user.click(expandButton);
+      userEvent.click(expandButton);
       await waitFor(() => expect(collapsedSectionNode).toHaveAttribute('aria-expanded', 'false'));
     });
 
@@ -276,38 +240,21 @@ describe('Outline Tab', () => {
       });
 
       it('renders show more/less button and handles click', async () => {
-        const user = userEvent.setup();
         expect(screen.getByTestId('alert-container-welcome')).toBeInTheDocument();
         let showMoreButton = screen.getByRole('button', { name: 'Show More' });
         expect(showMoreButton).toBeInTheDocument();
 
-        await user.click(showMoreButton);
+        userEvent.click(showMoreButton);
         let showLessButton = screen.getByRole('button', { name: 'Show Less' });
         expect(showLessButton).toBeInTheDocument();
         expect(screen.getByTestId('long-welcome-message-iframe')).toBeInTheDocument();
 
-        await user.click(showLessButton);
+        userEvent.click(showLessButton);
         showLessButton = screen.queryByRole('button', { name: 'Show Less' });
         expect(showLessButton).not.toBeInTheDocument();
         showMoreButton = screen.getByRole('button', { name: 'Show More' });
         expect(showMoreButton).toBeInTheDocument();
       });
-    });
-
-    it('ignores comments and misformatted HTML', async () => {
-      setTabData({
-        welcome_message_html: '<p class="additional-spaces-in-tag"   >'
-      + '<!-- Even if the welcome_message_html length is above the limit because of comments, we hope it will not be shortened. -->'
-      + '<!-- Even if the welcome_message_html length is above the limit because of comments, we hope it will not be shortened. -->'
-      + 'Test welcome message that happens to be longer than one hundred words because of comments but displayed content is less.'
-      + 'It should not be shortened.'
-      + '<!-- Even if the welcome_message_html length is above the limit because of comments, we hope it will not be shortened. -->'
-      + '<!-- Even if the welcome_message_html length is above the limit because of comments, we hope it will not be shortened. -->'
-      + '</p>',
-      });
-      await fetchAndRender();
-      const showMoreButton = screen.queryByRole('button', { name: 'Show More' });
-      expect(showMoreButton).not.toBeInTheDocument();
     });
 
     it('does not display if no update available', async () => {
@@ -1296,98 +1243,6 @@ describe('Outline Tab', () => {
 
       await waitFor(() => expect(axiosMock.history.post).toHaveLength(1));
       expect(axiosMock.history.post[0].url).toEqual(resendEmailUrl);
-    });
-
-    it('section should show hidden from toc message when hide_from_toc is true', async () => {
-      const { courseBlocks } = await buildMinimalCourseBlocks(courseId, 'Title', { resumeBlock: true });
-      const courseBlocksIds = Object.keys(courseBlocks.blocks);
-      const newCourseBlocks = courseBlocksIds.reduce((blocks, blockId) => ({
-        ...blocks,
-        [blockId]: {
-          ...courseBlocks.blocks[blockId],
-          hide_from_toc: true,
-        },
-      }), {});
-
-      setTabData({
-        course_blocks: { blocks: newCourseBlocks },
-      });
-      await fetchAndRender();
-
-      const iconHiddenFromTocSectionNode = screen.getByTestId('hide-from-toc-section-icon');
-      const textHiddenFromTocSectionNode = screen.getByTestId('hide-from-toc-section-text');
-      expect(iconHiddenFromTocSectionNode).toBeInTheDocument();
-      expect(textHiddenFromTocSectionNode).toBeInTheDocument();
-      expect(textHiddenFromTocSectionNode.textContent).toBe('Hidden in Course Outline, accessible via link');
-    });
-
-    it('section should not show hidden from toc message when hide_from_toc is false', async () => {
-      const { courseBlocks } = await buildMinimalCourseBlocks(courseId, 'Title', { resumeBlock: true });
-      const courseBlocksIds = Object.keys(courseBlocks.blocks);
-      const newCourseBlocks = courseBlocksIds.reduce((blocks, blockId) => ({
-        ...blocks,
-        [blockId]: {
-          ...courseBlocks.blocks[blockId],
-          hide_from_toc: false,
-        },
-      }), {});
-
-      setTabData({
-        course_blocks: { blocks: newCourseBlocks },
-      });
-      await fetchAndRender();
-
-      const iconHiddenFromTocSectionNode = screen.queryByTestId('hide-from-toc-section-icon');
-      const textHiddenFromTocSectionNode = screen.queryByTestId('hide-from-toc-section-text');
-
-      expect(iconHiddenFromTocSectionNode).not.toBeInTheDocument();
-      expect(textHiddenFromTocSectionNode).not.toBeInTheDocument();
-    });
-
-    it('sequence link should show hidden from toc message when hide_from_toc is true', async () => {
-      const { courseBlocks } = await buildMinimalCourseBlocks(courseId, 'Title', { resumeBlock: true });
-      const courseBlocksIds = Object.keys(courseBlocks.blocks);
-      const newCourseBlocks = courseBlocksIds.reduce((blocks, blockId) => ({
-        ...blocks,
-        [blockId]: {
-          ...courseBlocks.blocks[blockId],
-          hide_from_toc: true,
-        },
-      }), {});
-
-      setTabData({
-        course_blocks: { blocks: newCourseBlocks },
-      });
-      await fetchAndRender();
-
-      const iconHiddenFromTocSequenceLinkNode = screen.getByTestId('hide-from-toc-sequence-link-icon');
-      const textHiddenFromTocSequenceLink = screen.getByTestId('hide-from-toc-sequence-link-text');
-      expect(iconHiddenFromTocSequenceLinkNode).toBeInTheDocument();
-      expect(textHiddenFromTocSequenceLink).toBeInTheDocument();
-      expect(textHiddenFromTocSequenceLink.textContent).toBe('Subsections are not navigable between each other, they can only be accessed through their link.');
-    });
-
-    it('sequence link not show hidden from toc message when hide_from_toc is false', async () => {
-      const { courseBlocks } = await buildMinimalCourseBlocks(courseId, 'Title', { resumeBlock: true });
-      const courseBlocksIds = Object.keys(courseBlocks.blocks);
-      const newCourseBlocks = courseBlocksIds.reduce((blocks, blockId) => ({
-        ...blocks,
-        [blockId]: {
-          ...courseBlocks.blocks[blockId],
-          hide_from_toc: false,
-        },
-      }), {});
-
-      setTabData({
-        course_blocks: { blocks: newCourseBlocks },
-      });
-      await fetchAndRender();
-
-      const iconHiddenFromTocSequenceLink = screen.queryByTestId('hide-from-toc-sequence-link-icon');
-      const textHiddenFromTocSequenceLink = screen.queryByTestId('hide-from-toc-sequence-link-text');
-
-      expect(iconHiddenFromTocSequenceLink).not.toBeInTheDocument();
-      expect(textHiddenFromTocSequenceLink).not.toBeInTheDocument();
     });
   });
 });

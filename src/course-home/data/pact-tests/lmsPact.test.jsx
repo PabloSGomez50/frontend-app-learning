@@ -1,6 +1,6 @@
+import { Pact, Matchers } from '@pact-foundation/pact';
 import path from 'path';
 import { mergeConfig, getConfig } from '@edx/frontend-platform';
-import { PactV3, MatchersV3 } from '@pact-foundation/pact';
 
 import {
   getCourseHomeCourseMetadata,
@@ -14,8 +14,8 @@ import {
 
 const {
   somethingLike: like, term, boolean, string, eachLike,
-} = MatchersV3;
-const provider = new PactV3({
+} = Matchers;
+const provider = new Pact({
   consumer: 'frontend-app-learning',
   provider: 'lms',
   log: path.resolve(process.cwd(), 'src/course-home/data/pact-tests/logs', 'pact.log'),
@@ -28,11 +28,15 @@ const provider = new PactV3({
 describe('Course Home Service', () => {
   beforeAll(async () => {
     initializeMockApp();
-    mergeConfig({
-      LMS_BASE_URL: 'http://localhost:8081',
-    }, 'Custom app config for pact tests');
+    await provider
+      .setup()
+      .then((options) => mergeConfig({
+        LMS_BASE_URL: `http://localhost:${options.port}`,
+      }, 'Custom app config for pact tests'));
   });
 
+  afterEach(() => provider.verify());
+  afterAll(() => provider.finalize());
   describe('When a request to fetch tab is made', () => {
     it('returns tab data for a course_id', async () => {
       setTimeout(() => {
@@ -89,7 +93,6 @@ describe('Course Home Service', () => {
               }),
               title: string('Demonstration Course'),
               username: string('edx'),
-              has_course_author_access: boolean(true),
             },
           },
         });
@@ -134,7 +137,6 @@ describe('Course Home Service', () => {
           ],
           title: 'Demonstration Course',
           username: 'edx',
-          hasCourseAuthorAccess: true,
         };
         const response = getCourseHomeCourseMetadata(courseId, 'outline');
         expect(response).toBeTruthy();

@@ -131,6 +131,9 @@ const OutlineTab = ({ intl }) => {
           <div role="heading" aria-level="1" className="h2">{title}</div>
         </div>
       </div>
+      <div>
+        <p>Test de contexto</p>
+      </div>
       <div className="row course-outline-tab">
         <AccountActivationAlert />
         <div className="col-12">
