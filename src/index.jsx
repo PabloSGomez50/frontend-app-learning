@@ -134,10 +134,6 @@ subscribe(APP_READY, () => {
                 />
               ))}
             </Routes>
-            <div style='background-color: red; position: fixed; bottom: 20px; right: 20px;' id="cooparte-btn">
-              <p>Test cooparte</p>
-              <p>Bla bla</p>
-            </div>
           </UserMessagesProvider>
         </NoticesProvider>
       </PathFixesProvider>
