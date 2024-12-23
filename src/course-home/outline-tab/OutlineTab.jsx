@@ -133,6 +133,7 @@ const OutlineTab = ({ intl }) => {
       </div>
       <div>
         <p>Test de contexto</p>
+        <p>Soy un capo</p>
       </div>
       <div className="row course-outline-tab">
         <AccountActivationAlert />
